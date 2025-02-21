@@ -14,6 +14,9 @@
 #include <string>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
+
+#include <chrono>
 
 #include "config.h"
 
@@ -22,6 +25,7 @@ struct mosquitto *mosq{nullptr};
 
 bool isconnected = false;
 bool iscancelled = false;
+std::chrono::high_resolution_clock::time_point last_measurement = std::chrono::high_resolution_clock::now();
 
 void on_connect(struct mosquitto *mosq, void *obj, int reason_code)
 {
@@ -98,25 +102,36 @@ void rx_handler(can_frame_t* frame)
 
    if(frame->can_id == 0x301)
    {
-      const char *topic_tot = "can2mq/data/total_power";
-      snprintf(payload, 1024, "%d", static_cast<int>(convertByteToInt16(frame->data[0], frame->data[1])));
-      int err = mosquitto_publish(mosq, nullptr, topic_tot, strlen(payload), payload, 0, false);
+      std::chrono::high_resolution_clock::time_point new_measurement = std::chrono::high_resolution_clock::now();
+      float intervalSeconds = std::chrono::duration<float>(new_measurement - last_measurement).count();
+
+      // Calculate consumed/produced energy since last measurement
+      // power is in W, energy in Wh
+      float power = static_cast<float>(convertByteToInt16(frame->data[6], frame->data[7]));
+      float energy = power * intervalSeconds / 3600.0;
+
+      const char *topic = "can2mq/power/raw";
+      snprintf(payload, 1024, "{\"total_power\": %d,\"phase1\": %d,\"phase2\": %d,\"phase3\":%d,\"energy\": %f}",
+         static_cast<int>(convertByteToInt16(frame->data[6], frame->data[7])),
+         static_cast<int>(convertByteToInt16(frame->data[0], frame->data[1])),
+         static_cast<int>(convertByteToInt16(frame->data[2], frame->data[3])),
+         static_cast<int>(convertByteToInt16(frame->data[4], frame->data[5])),
+         energy);
+      int err = mosquitto_publish(mosq, nullptr, topic, strlen(payload), payload, 0, false);
       if(err != MOSQ_ERR_SUCCESS)
          fprintf(stderr, "Error wile publishing: %s\n", mosquitto_strerror(err));
 
-      const char *topic_p1 = "can2mq/data/phase1";
-      snprintf(payload, 1024, "%d", static_cast<int>(convertByteToInt16(frame->data[2], frame->data[3])));
-      int err = mosquitto_publish(mosq, nullptr, topic_p1, strlen(payload), payload, 0, false);
-      if(err != MOSQ_ERR_SUCCESS)
-         fprintf(stderr, "Error wile publishing: %s\n", mosquitto_strerror(err));
-      const char *topic_p2 = "can2mq/data/phase2";
-      snprintf(payload, 1024, "%d", static_cast<int>(convertByteToInt16(frame->data[4], frame->data[5])));
-      int err = mosquitto_publish(mosq, nullptr, topic_p2, strlen(payload), payload, 0, false);
-      if(err != MOSQ_ERR_SUCCESS)
-         fprintf(stderr, "Error wile publishing: %s\n", mosquitto_strerror(err));
-      const char *topic_p3 = "can2mq/data/phase3";
-      snprintf(payload, 1024, "%d", static_cast<int>(convertByteToInt16(frame->data[6], frame->data[7])));
-      int err = mosquitto_publish(mosq, nullptr, topic_p3, strlen(payload), payload, 0, false);
+      last_measurement = new_measurement;
+   }
+   else if(frame->can_id == 0x302)
+   {
+      const char *topic_pot = "can2mq/pot/raw";
+      snprintf(payload, 1024, "{\"freq\": %d,\"phase1_pot\": %d,\"phase2_pot\": %d,\"phase3_pot\":%d}",
+         static_cast<int>(convertByteToInt16(frame->data[6], frame->data[7])),
+         static_cast<int>(convertByteToInt16(frame->data[0], frame->data[1])),
+         static_cast<int>(convertByteToInt16(frame->data[2], frame->data[3])),
+         static_cast<int>(convertByteToInt16(frame->data[4], frame->data[5])));
+      int err = mosquitto_publish(mosq, nullptr, topic_pot, strlen(payload), payload, 0, false);
       if(err != MOSQ_ERR_SUCCESS)
          fprintf(stderr, "Error wile publishing: %s\n", mosquitto_strerror(err));
    }
