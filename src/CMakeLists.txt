@@ -49,7 +49,12 @@ ADD_LIBRARY(libcan STATIC
 )
 target_include_directories(libcan PUBLIC ${LIBCAN_DIR}/include)
 
-add_executable(can2mq can2mq.cpp config.cpp config.h)
+add_executable(can2mq
+	can2mq.cpp
+	config.cpp config.h
+	PublishToMQ.cpp PublishToMQ.h
+	MQManager.cpp MQManager.h
+)
 target_include_directories(can2mq PUBLIC ${MOSQUITTO_INCLUDE_DIR} ${JSON_DIR})
 target_link_libraries(can2mq PUBLIC libcan ${MOSQUITTO_LIBRARIES})
 target_compile_features(can2mq PUBLIC cxx_std_17)
