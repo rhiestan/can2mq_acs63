@@ -9,6 +9,17 @@
 #include <cstddef>
 #include <cstring>
 
+#if defined(_WIN32)
+// To compile on Windows
+int getpid()
+{
+   return 0;
+}
+#else
+#include <unistd.h>
+#endif
+
+
 // Singleton instance
 MQManager MQManager::instance_;
 
@@ -62,9 +73,12 @@ void MQManager::disconnect()
 
 void MQManager::publish(const char *topic, const char *payload)
 {
-   int err = mosquitto_publish(mosq_, nullptr, topic, strlen(payload), payload, 0, false);
-   if(err != MOSQ_ERR_SUCCESS)
-      fprintf(stderr, "Error wile publishing: %s\n", mosquitto_strerror(err));
+   if(mosq_ != nullptr && isConnected_)
+   {
+      int err = mosquitto_publish(mosq_, nullptr, topic, strlen(payload), payload, 0, false);
+      if(err != MOSQ_ERR_SUCCESS)
+         fprintf(stderr, "Error wile publishing: %s\n", mosquitto_strerror(err));
+   }
 }
 
 void MQManager::on_connect(struct mosquitto *mosq, void *obj, int reason_code)

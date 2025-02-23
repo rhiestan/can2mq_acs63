@@ -2,6 +2,8 @@
 #include "PublishToMQ.h"
 #include "MQManager.h"
 
+std::vector<PublishToMQ*> PublishToMQ::publisherList_;
+
 PublishToMQ::PublishToMQ(MQManager &mq, const char *topic, int interval)
    : mq_{mq}, topic_(topic), interval_{interval}
 {
@@ -59,4 +61,6 @@ void PublishToMQ::publishData(int totalPower, int phase1, int phase2, int phase3
    const char *topic = "can2mq/power/raw";
    snprintf(payload, 1024, "{\"total_power\": %d,\"phase1\": %d,\"phase2\": %d,\"phase3\":%d,\"energy\": %f}",
       totalPower, phase1, phase2, phase3, energy);
+
+   mq_.publish(topic_.c_str(), payload);
 }

@@ -108,7 +108,7 @@ int main(int argc, char **argv)
    if(argc > 1)
       config.load(std::filesystem::path(argv[1]));
    
-   MQManager mq;
+   MQManager &mq = MQManager::getInstance();
    mq.connect(config);
 
    if(mq.isConnected())

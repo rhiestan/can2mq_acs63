@@ -1,0 +1,12 @@
+[Unit]
+Description=can2mq service
+After=network.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory=/root
+ExecStart=/root/bin/can2mq /root/bin/config.json
+
+[Install]
+WantedBy=multi-user.target
