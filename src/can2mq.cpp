@@ -108,10 +108,16 @@ int main(int argc, char **argv)
    if(argc > 1)
       config.load(std::filesystem::path(argv[1]));
    
+   if(!config.prepareCommand.empty())
+   {
+      // Run a command
+      system(config.prepareCommand.c_str());
+   }
+
    MQManager &mq = MQManager::getInstance();
    mq.connect(config);
 
-   if(mq.isConnected())
+   //if(mq.isConnected())  // Too soon, we should wait until connection is set up
    {
       PublishToMQ mqLive(mq, "can2mq/power/raw", -1);           // Publish all data live to MQ
       PublishToMQ mqOneSecond(mq, "can2mq_1s/power/raw", 1);    // Publish every second

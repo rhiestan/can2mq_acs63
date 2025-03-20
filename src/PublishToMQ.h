@@ -23,7 +23,7 @@ public:
    static void addPublisher(PublishToMQ *publisher);
 
 protected:
-   void publishData(int totalPower, int phase1, int phase2, int phase3, float energy);
+   void publishData(int totalPower, int phase1, int phase2, int phase3, float energyPos, float energyNeg);
 
 private:
    MQManager &mq_;
@@ -33,7 +33,7 @@ private:
    int numberOfMeasurements_{0};
    int totalPowerSum_{0};
    int phase1Sum_{0}, phase2Sum_{0}, phase3Sum_{0};
-   double energySum_{0};
+   double energyPosSum_{0}, energyNegSum_{0};
 
    static std::vector<PublishToMQ*> publisherList_;
 };

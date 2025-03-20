@@ -28,16 +28,19 @@ void PublishToMQ::newEnergyData(const std::chrono::high_resolution_clock::time_p
 
       // Formula see https://math.stackexchange.com/questions/106700/incremental-averaging
       //energyAverage_ += (static_cast<double>(energy) - energyAverage_) / static_cast<double>(numberOfMeasurements_);
-      energySum_ += static_cast<double>(energy);
+      if(energy > 0)
+         energyPosSum_ += static_cast<double>(energy);
+      else
+         energyNegSum_ -= static_cast<double>(energy);
 
       if(tp >= nextPublishTime_)
       {
          publishData(totalPowerSum_ / numberOfMeasurements_, phase1Sum_ / numberOfMeasurements_,
-            phase2Sum_ / numberOfMeasurements_, phase3Sum_ / numberOfMeasurements_, static_cast<float>(energySum_));
+            phase2Sum_ / numberOfMeasurements_, phase3Sum_ / numberOfMeasurements_, static_cast<float>(energyPosSum_), static_cast<float>(energyNegSum_));
 
          numberOfMeasurements_ = 0;
          totalPowerSum_ = phase1Sum_ = phase2Sum_ = phase3Sum_ = 0;
-         energySum_ = 0;
+         energyPosSum_ = energyNegSum_ = 0;
          nextPublishTime_ += std::chrono::seconds{interval_};
       }
    }
@@ -54,13 +57,13 @@ void PublishToMQ::addPublisher(PublishToMQ *publisher)
    publisherList_.push_back(publisher);
 }
 
-void PublishToMQ::publishData(int totalPower, int phase1, int phase2, int phase3, float energy)
+void PublishToMQ::publishData(int totalPower, int phase1, int phase2, int phase3, float energyPos, float energyNeg)
 {
    char payload[1024];
 
    const char *topic = "can2mq/power/raw";
-   snprintf(payload, 1024, "{\"total_power\": %d,\"phase1\": %d,\"phase2\": %d,\"phase3\":%d,\"energy\": %f}",
-      totalPower, phase1, phase2, phase3, energy);
+   snprintf(payload, 1024, "{\"total_power\": %d,\"phase1\": %d,\"phase2\": %d,\"phase3\":%d,\"energyPos\": %f,\"energyNeg\": %f}",
+      totalPower, phase1, phase2, phase3, energyPos, energyNeg);
 
    mq_.publish(topic_.c_str(), payload);
 }
